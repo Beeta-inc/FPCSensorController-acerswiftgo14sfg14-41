@@ -1,0 +1,69 @@
+diff --git a/data/autosuspend.hwdb b/data/autosuspend.hwdb
+index 7b5483e..ce42081 100644
+--- a/data/autosuspend.hwdb
++++ b/data/autosuspend.hwdb
+@@ -169,6 +169,7 @@ usb:v10A5pD205*
+ 
+ # Supported by libfprint driver fpcmoh
+ usb:v10A5p9800*
++usb:v10A5pE340*
+  ID_AUTOSUSPEND=1
+  ID_PERSIST=0
+ 
+diff --git a/libfprint/drivers/fpcmoh/fpc.c b/libfprint/drivers/fpcmoh/fpc.c
+index 2eb86c5..1924305 100644
+--- a/libfprint/drivers/fpcmoh/fpc.c
++++ b/libfprint/drivers/fpcmoh/fpc.c
+@@ -203,6 +203,7 @@ typedef struct
+ static const FpIdEntry id_table[] = {
+   { .vid = 0x10A5,  .pid = 0x9800,  },
+   { .vid = 0x10A5,  .pid = 0xA900,  },   /* Honor MagicBook, FPC "Disum", FW 22.26.2.29 */
++  { .vid = 0x10A5,  .pid = 0xE340,  },   /* Acer Swift Go 14, FPC "Disum", FW 20.26.23.27 */
+   { .vid = 0,  .pid = 0,  .driver_data = 0 },   /* terminating entry */
+ };
+ 
+@@ -2204,16 +2205,21 @@ fpc_dev_probe (FpDevice *device)
+   switch (productid)
+     {
+     case 0x9800:
++      self->ep_in = 2 | FPI_USB_ENDPOINT_IN;
+       self->max_enroll_stage = MAX_ENROLL_SAMPLES;
+       break;
+ 
+     case 0xA900:
+-      /* patches/0010: this sensor's matcher wants sixteen samples. */
++      self->ep_in = 2 | FPI_USB_ENDPOINT_IN;
++      self->max_enroll_stage = MAX_ENROLL_SAMPLES_A900;
++      self->read_remaining = TRUE;
++      self->relayout_img_msg = TRUE;
++      break;
++
++    case 0xE340:
++      self->ep_in = 1 | FPI_USB_ENDPOINT_IN;
+       self->max_enroll_stage = MAX_ENROLL_SAMPLES_A900;
+-      /* patches/0006: sends three more records per capture than the eleven
+-       * fixed read states consume. */
+       self->read_remaining = TRUE;
+-      /* patches/0009: 24 byte image message prefix where libfpcbep.so wants 34. */
+       self->relayout_img_msg = TRUE;
+       break;
+ 
+diff --git a/libfprint/drivers/fpcmoh/fpc.h b/libfprint/drivers/fpcmoh/fpc.h
+index 215d1bc..941829a 100644
+--- a/libfprint/drivers/fpcmoh/fpc.h
++++ b/libfprint/drivers/fpcmoh/fpc.h
+@@ -83,7 +83,7 @@
+ #define DATA_TIMEOUT (5000)
+ 
+ /* Usb port setting */
+-#define EP_IN (2 | FPI_USB_ENDPOINT_IN)
++#define EP_IN (self->ep_in ? self->ep_in : (2 | FPI_USB_ENDPOINT_IN))
+ #define EP_IN_MAX_BUF_SIZE (2048)
+ 
+ 
+@@ -356,4 +356,5 @@ struct _FpiDeviceFpcMoh
+ 
+   /* patches/0010: samples the matcher refused during this enrollment. */
+   guint32         enroll_rejects;
++  guint8          ep_in;
+ };

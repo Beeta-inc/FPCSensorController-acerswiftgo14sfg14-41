@@ -1,0 +1,13 @@
+# Binaries & build artifacts
+*.so
+*.so.*
+build/
+dist/
+__pycache__/
+*.pcap
+*.pcapng
+
+# Keep blob directory structure
+!blob/
+blob/*
+!blob/.gitkeep
