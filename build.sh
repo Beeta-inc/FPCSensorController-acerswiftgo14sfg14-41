@@ -53,6 +53,7 @@ rm -rf "$TREE/builddir"
 meson setup "$TREE/builddir" "$TREE" \
   --prefix=/opt/fpc-e340 \
   -Ddrivers=fpcmoh \
+  -Dudev_rules=disabled -Dudev_hwdb=disabled \
   -Dgtk-examples=false -Ddoc=false -Dintrospection=false \
   -Dc_link_args="$LINKARGS" -Dcpp_link_args="$LINKARGS"
 
