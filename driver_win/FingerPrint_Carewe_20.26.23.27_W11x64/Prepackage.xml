@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModuleInfo xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ModulePN>MOD01?????00??????</ModulePN>
+  <Creator PN="01" Name="Acer-HQ1" />
+  <Type PN="" Name="Drivers" />
+  <Module PN="" Name="Carewe Finger Print_M Finger Print" Alias="" GUID="" Serial="Finger Print" Provider="Carewe" Class="Finger Print_M" />
+  <WOS PN="93" Sku="WN All" CPU="X64" />
+  <Lang>All language</Lang>
+  <ModuleVersion>v20.26.23.27</ModuleVersion>
+  <DriverVersion>v20.26.23.27</DriverVersion>
+  <OptionVersion>Install.cmd</OptionVersion>
+  <ProjectCodeName>NULL</ProjectCodeName>
+  <OdmName>NBHUAQ</OdmName>
+  <ModuleTimeout>0</ModuleTimeout>
+  <InstallPreiod>SCD_WinPE</InstallPreiod>
+  <Reboot>False</Reboot>
+  <Delete>False</Delete>
+  <ReinstallProcessList>
+    <Process Country="" OS-Language="" OS-Sku="" Check="" Timeout="0" RetCode="-" Params="" Exec="%RELATIVE_PATH%\Install.cmd" Order="00" Period="" />
+  </ReinstallProcessList>
+  <AutoRun>True</AutoRun>
+  <InstallPath />
+  <Description />
+  <ProcessList>
+    <Process Country="" OS-Language="" OS-Sku="" Check="False" Timeout="0" RetCode="-" Params="" Exec="%RELATIVE_PATH%\Install.cmd" Order="00" Period="" />
+  </ProcessList>
+  <RegItemList />
+  <ModuleProperty>RCD,STCD,RSCD</ModuleProperty>
+  <HWIDs>USB\VID_10A5&amp;PID_E340</HWIDs>
+  <AutoCheckHWID>False</AutoCheckHWID>
+  <CheckRemove>False</CheckRemove>
+  <PackageFamilyName />
+  <MVPKernelVersion>2.0.7.9</MVPKernelVersion>
+  <MVPUIVersion>2.0.9.5</MVPUIVersion>
+  <LOB>Notebook</LOB>
+</ModuleInfo>

@@ -1,0 +1,218 @@
+;
+;  Biometric Sensor Device - USB 
+;
+;  Copyright (c) Fingerprint Cards AB 
+; ------------------------------------------------------------------------
+
+
+[Version]
+Signature   = "$Windows NT$"
+Class       = Biometric
+ClassGuid   = {53D29EF7-377C-4D14-864B-EB3A85769359}
+Provider    = %FPC%
+CatalogFile = fpc_disum_um_usb.cat
+DriverVer = 07/20/2022,20.26.23.27
+
+; =================== Manufacturer/Models sections =======================
+
+[Manufacturer]
+%FPC% = Fingerprint, NTx86, NTamd64
+
+[Fingerprint.NTx86]
+"FPC Fingerprint Reader (Disum)"      = FpcUsb_Install,  USB\VID_10A5&PID_E340
+
+[Fingerprint.NTamd64]
+"FPC Fingerprint Reader (Disum)"      = FpcUsb_Install,  USB\VID_10A5&PID_E340&MI_00
+"FPC Fingerprint Reader (Disum)"      = FpcUsb_Install,  USB\VID_10A5&PID_E340
+
+[Fingerprint.NTarm]
+"FPC Fingerprint Reader (Disum)"      = FpcUsb_Install,  USB\VID_10A5&PID_E340
+
+; ------------------------------------------------------------------------
+
+[FpcUsb_Install.NT]
+CopyFiles    = UMDriverCopy
+CopyFiles    = WinBioTouchEngineCopy
+AddProperty  = Device_Properties
+Include      = WINUSB.INF
+Needs        = WINUSB.NT
+FeatureScore = 0x00
+
+; ------------------------------------------------------------------------
+
+[FpcUsb_Install.NT.hw]
+AddReg       = Biometric_Device_AddReg
+AddReg       = DriverPlugInAddReg
+AddReg       = DatabaseAddReg
+AddReg       = EventsAddReg
+AddReg       = FormatAddReg
+
+; ------------------------------------------------------------------------
+
+[FpcUsb_Install.NT.Services]
+AddService   = WUDFRd, 0x01fa, WUDFRD_ServiceInstall
+AddService   = WinUsb, 0x01f8, WinUsb_ServiceInstall
+AddService   = FpcSessionService, 0x00000800, FpcSS_ServiceInstall
+
+; ------------------------------------------------------------------------
+
+[FpcUsb_Install.NT.CoInstallers]
+AddReg       = WUDF_CoInstallers_AddReg
+CopyFiles    = WUDF_CoInstallers_CopyFiles
+
+; ------------------------------------------------------------------------
+
+[FpcUsb_Install.NT.Wdf]
+UmdfDispatcher         = WinUsb
+UmdfFileObjectPolicy   = AllowNullAndUnknownFileObjects
+
+UmdfService            = FpcG2Usb,UMDFFpcUsb_Install
+UmdfServiceOrder       = FpcG2Usb
+UmdfHostProcessSharing = ProcessSharingDisabled
+UmdfImpersonationLevel = Impersonation
+
+; this enables direct hardware access from UMDF driver
+UmdfDirectHardwareAccess = AllowDirectHardwareAccess
+
+; ------------------------------------------------------------------------
+
+[UMDFFpcUsb_Install]
+UmdfLibraryVersion = 2.17.0
+ServiceBinary      = %12%\UMDF\fpc_disum.dll
+
+[WUDFRD_ServiceInstall]
+DisplayName        = %WudfRdDisplayName%
+ServiceType        = 1
+StartType          = 3
+ErrorControl       = 1
+ServiceBinary      = %12%\WUDFRd.sys
+Dependencies       = wudfsvc
+;LoadOrderGroup     = Base
+
+[WinUsb_ServiceInstall]
+DisplayName        = %WinUsb_SvcDesc%
+ServiceType        = 1
+StartType          = 3
+ErrorControl       = 1
+ServiceBinary      = %12%\WinUSB.sys
+
+[FpcSS_ServiceInstall]
+DisplayName = %SessionService%
+ServiceType = 0x00000010
+StartType = 2
+ErrorControl = 1
+ServiceBinary = %11%\WinBioPlugins\FpcSessionService.exe
+; ------------------------------------------------------------------------
+
+[Device_Properties]
+DeviceIcon,,,,"%%SYSTEMROOT%%\system32\SysClass.dll,-201"
+
+; ------------------------------------------------------------------------
+
+[Biometric_Device_AddReg]
+HKR,,"DeviceCharacteristics",0x10001,0x0100     ; Use same security checks on relative opens
+HKR,,"Security",,"D:P(A;;GA;;;BA)(A;;GA;;;SY)"  ; Allow generic-all access to Built-in administrators and Local system
+HKR,,"LowerFilters",0x00010008,"WinUsb"         ; FLG_ADDREG_TYPE_MULTI_SZ | FLG_ADDREG_APPEND
+HKR,,"Exclusive",0x10001,1
+HKR,,"WinUsbPowerPolicyOwnershipDisabled",0x00010001,1  ; Driver takes ownership of power policy
+HKR,,"SystemWakeEnabled",0x00010001,1
+HKR,,"DeviceIdleEnabled",0x00010001,1
+HKR,,"UserSetDeviceIdleEnabled",0x00010001,1
+HKR,,"DefaultIdleState",0x00010001,1
+HKR,,"DefaultIdleTimeout",0x00010001,5000
+
+HKR,"WDF","WdfDirectedPowerTransitionEnable",0x00010001,1
+HKR,,"SelectiveSuspendEnabled",0x00000001,0x1
+HKR,WudfPowerPolicySettings,"WdfDefaultIdleInWorkingState",0x00010001,1  ; Tell UMDF to enable idle and wake by default
+HKR,WudfPowerPolicySettings,"WdfDefaultWakeFromSleepState",0x00010001,1
+
+[DriverPlugInAddReg]
+HKR,WinBio\Configurations,DefaultConfiguration,,"0"
+HKR,WinBio\Configurations\0,SensorMode,0x10001,1     ; Basic - 1, Advanced - 2
+HKR,WinBio\Configurations\0,SystemSensor,0x10001,1   ; UAC/Winlogon - 1
+HKR,WinBio\Configurations\0,SensorAdapterBinary,,"WinBioSensorAdapter.dll"
+HKR,WinBio\Configurations\0,StorageAdapterBinary,,"WinBioStorageAdapter.dll"
+HKR,WinBio\Configurations\0,EngineAdapterBinary,,"FpcDisumEngine.dll"
+HKR,WinBio\Configurations\0,DatabaseId,,"88A4E621-F17E-4E12-B4EF-ADE24E276369"
+
+; ------------------------------------------------------------------------
+
+[SignatureAttributes]
+FpcDisumEngine.dll = SignatureAttributes.WindowsHello
+fpc_enclave.dll = SignatureAttributes.WindowsHello
+fpc_evtprovider.dll = SignatureAttributes.WindowsHello
+
+[SignatureAttributes.WindowsHello]
+WindowsHello = true
+
+; ------------------------------------------------------------------------
+
+[DatabaseAddReg]
+HKLM,System\CurrentControlSet\Services\WbioSrvc\Databases\{88A4E621-F17E-4E12-B4EF-ADE24E276369},BiometricType,0x00010001,0x00000008
+HKLM,System\CurrentControlSet\Services\WbioSrvc\Databases\{88A4E621-F17E-4E12-B4EF-ADE24E276369},Attributes,0x00010001,0x00000001
+HKLM,System\CurrentControlSet\Services\WbioSrvc\Databases\{88A4E621-F17E-4E12-B4EF-ADE24E276369},Format,,"00000000-0000-0000-0000-000000000000"
+HKLM,System\CurrentControlSet\Services\WbioSrvc\Databases\{88A4E621-F17E-4E12-B4EF-ADE24E276369},InitialSize,0x00010001,0x00000020
+HKLM,System\CurrentControlSet\Services\WbioSrvc\Databases\{88A4E621-F17E-4E12-B4EF-ADE24E276369},AutoCreate,0x00010001,0x00000001
+HKLM,System\CurrentControlSet\Services\WbioSrvc\Databases\{88A4E621-F17E-4E12-B4EF-ADE24E276369},AutoName,0x00010001,0x00000001
+HKLM,System\CurrentControlSet\Services\WbioSrvc\Databases\{88A4E621-F17E-4E12-B4EF-ADE24E276369},FilePath,,""
+HKLM,System\CurrentControlSet\Services\WbioSrvc\Databases\{88A4E621-F17E-4E12-B4EF-ADE24E276369},ConnectionString,,""
+
+; ------------------------------------------------------------------------
+
+[FormatAddReg]
+HKLM, SYSTEM\CurrentControlSet\Services\WbioSrvc\Service Providers\Fingerprint\Sensor Layout\USB VID_10A5&PID_E340, location,0x00010001,0x00000008
+HKLM, SYSTEM\CurrentControlSet\Services\WbioSrvc\Service Providers\Fingerprint\Sensor Layout\USB VID_10A5&PID_E340, shape,0x00010001,0x00000002
+HKLM, SYSTEM\CurrentControlSet\Services\WbioSrvc\Service Providers\Fingerprint\Sensor Layout\USB VID_10A5&PID_E340, powerbutton,0x00010001,0x00000001
+HKLM, SYSTEM\CurrentControlSet\Services\WbioSrvc\Service Providers\Fingerprint\Sensor Layout\USB VID_10A5&PID_E340, startbutton,0x00010001,0x00000000
+
+; ------------------------------------------------------------------------
+
+[EventsAddReg]
+HKLM, System\CurrentControlSet\Services\eventlog\Application\FPC,EventMessageFile,,"%%SystemRoot%%\System32\drivers\UMDF\fpc_evtprovider.dll"
+HKLM, System\CurrentControlSet\Services\eventlog\Application\FPC,TypesSupported,0x00010001,0x00000007
+
+[SourceDisksFiles]
+fpc_disum.dll=1
+FpcDisumEngine.dll=1
+fpc_enclave.dll=1
+FpcSessionservice.exe=1
+fpc_evtprovider.dll=1
+
+[SourceDisksNames.x86]
+1 = %MediaDescription%,,,\x86
+
+[SourceDisksNames.amd64]
+1 = %MediaDescription%,,,\x64
+
+[SourceDisksNames.arm]
+1 = %MediaDescription%,,,\arm
+
+[WUDF_CoInstallers_AddReg]
+HKR,,CoInstallers32,0x00010000,"WUDFCoInstaller.dll"
+
+[DestinationDirs]
+UMDriverCopy                  = 12,UMDF
+WinBioTouchEngineCopy         = 11,WinBioPlugins ; copy to \Windows\System32\WinBioPlugins
+WUDF_CoInstallers_CopyFiles   = 11
+
+[UMDriverCopy]
+fpc_disum.dll
+fpc_evtprovider.dll
+
+[WinBioTouchEngineCopy]
+FpcDisumEngine.dll
+fpc_enclave.dll
+FpcSessionService.exe
+
+[WUDF_CoInstallers_CopyFiles]
+
+
+; ------------------------------------------------------------------------
+
+[Strings]
+FPC                 = "Fingerprint Cards AB"
+MediaDescription    = "Fingerprint Cards Driver Installation Media"
+ClassName           = "Biometric Sensor Driver"
+WudfRdDisplayName   = "Windows Driver Foundation - User-mode Driver Framework Reflector"
+WinUsb_SvcDesc      = "WinUSB Driver"
+SessionService      = "FPC Session Service"

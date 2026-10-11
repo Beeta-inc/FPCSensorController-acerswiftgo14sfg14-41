@@ -1,0 +1,13 @@
+[INFORMATION]
+Projects=Dolphin_BCU;
+OSs=Windows Next All X64;
+WHQL=Y,
+ProviderFullName=Carewe
+SelectedDriverType=Use Inf
+Installer=%RELATIVE_PATH%\Install.cmd
+Parameters=
+InfFiles=%RELATIVE_PATH%\fpc_disum_um_usb.inf;
+DriverUtilityInstaller=
+DriverUtilityParameters=
+UWPSourceFolder=
+UWPInstaller=
