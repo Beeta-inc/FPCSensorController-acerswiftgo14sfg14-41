@@ -11,7 +11,7 @@ index 7b5483e..ce42081 100644
   ID_PERSIST=0
  
 diff --git a/libfprint/drivers/fpcmoh/fpc.c b/libfprint/drivers/fpcmoh/fpc.c
-index 2eb86c5..1924305 100644
+index 2eb86c5..a471aca 100644
 --- a/libfprint/drivers/fpcmoh/fpc.c
 +++ b/libfprint/drivers/fpcmoh/fpc.c
 @@ -203,6 +203,7 @@ typedef struct
@@ -22,7 +22,131 @@ index 2eb86c5..1924305 100644
    { .vid = 0,  .pid = 0,  .driver_data = 0 },   /* terminating entry */
  };
  
-@@ -2204,16 +2205,21 @@ fpc_dev_probe (FpDevice *device)
+@@ -454,11 +455,11 @@ fpc_read_remaining_cb (FpiUsbTransfer *transfer,
+           return;
+         }
+ 
+-      self->rem_expect_len = GUINT32_FROM_BE (evt->length);
++      self->rem_expect_len = fpc_u32 (self, evt->length);
+       self->rem_received_len = transfer->actual_length;
+ 
+       fp_dbg ("%s: trailing record, evtid %u, len %u", G_STRFUNC,
+-              GUINT32_FROM_BE (evt->cmdid), self->rem_expect_len);
++              fpc_u32 (self, evt->cmdid), self->rem_expect_len);
+ 
+       fpc_tls_buff_clear ();
+       if (transfer->actual_length > sizeof (evt_hdr_t))
+@@ -664,8 +665,8 @@ fpc_read_dead_pixels (FpiUsbTransfer *transfer, FpDevice *device,
+     {
+       //tls header
+       evt_hdr_t *evt = (evt_hdr_t *) transfer->buffer;
+-      guint32 evt_id = GUINT32_FROM_BE (evt->cmdid);
+-      guint32 img_len = GUINT32_FROM_BE (evt->length);
++      guint32 evt_id = fpc_u32 (self, evt->cmdid);
++      guint32 img_len = fpc_u32 (self, evt->length);
+       fp_dbg ("%s: evtid %u, img_len %u, enroll_cnt %u", G_STRFUNC, evt_id, img_len, self->enroll_count);
+ 
+       fpc_tls_buff_clear ();
+@@ -887,8 +888,8 @@ fpc_ssm_img_read_cb (FpiUsbTransfer *transfer, FpDevice *device,
+       //tls header
+       guint32 seq_1 = *((guint32 *) data);
+       evt_hdr_t *evt = (evt_hdr_t *) transfer->buffer;
+-      guint32 evt_id = GUINT32_FROM_BE (evt->cmdid);
+-      guint32 img_len = GUINT32_FROM_BE (evt->length);
++      guint32 evt_id = fpc_u32 (self, evt->cmdid);
++      guint32 img_len = fpc_u32 (self, evt->length);
+       fp_dbg ("%s: evtid %u, img_len %u, seq_1 %u", G_STRFUNC, evt_id, img_len, seq_1);
+ 
+       fpc_tls_buff_clear ();
+@@ -1818,7 +1819,12 @@ fpc_init_evt_handler (FpDevice *device, uint8_t *data, uint32_t len)
+       return -1;
+     }
+ 
+-  evt->cmdid = GUINT32_FROM_BE (evt->cmdid);
++  if (evt->cmdid == 0x02000000)
++    self->is_le = FALSE;
++  else if (evt->cmdid == 0x00000002)
++    self->is_le = TRUE;
++
++  evt->cmdid = fpc_u32 (self, evt->cmdid);
+ 
+   if (0x02 != evt->cmdid)
+     {
+@@ -1830,10 +1836,10 @@ fpc_init_evt_handler (FpDevice *device, uint8_t *data, uint32_t len)
+ 
+   PDEVICE_CONTEXT pDevCtx = self->dev_ctx;
+ 
+-  pDevCtx->img_w = GUINT16_FROM_BE (ini->img_w);
+-  pDevCtx->img_h = GUINT16_FROM_BE (ini->img_h);
++  pDevCtx->img_w = fpc_u16 (self, ini->img_w);
++  pDevCtx->img_h = fpc_u16 (self, ini->img_h);
+ 
+-  uint16_t hwid = GUINT16_FROM_BE (ini->hw_id);
++  uint16_t hwid = fpc_u16 (self, ini->hw_id);
+ 
+   if (hwid)
+     {
+@@ -1856,6 +1862,7 @@ fpc_init_evt_handler (FpDevice *device, uint8_t *data, uint32_t len)
+ static int
+ fpc_hello_evt_handler (FpDevice *device, uint8_t *data, uint32_t len)
+ {
++  FpiDeviceFpcMoh *self = FPI_DEVICE_FPCMOH (device);
+   static gint32 received_len = 0;
+   static gint32 expect_len = 0;
+ 
+@@ -1876,7 +1883,7 @@ fpc_hello_evt_handler (FpDevice *device, uint8_t *data, uint32_t len)
+     {
+       evt_hdr_t *evt = (evt_hdr_t *) data;
+ 
+-      evt->cmdid = GUINT32_FROM_BE (evt->cmdid);
++      evt->cmdid = fpc_u32 (self, evt->cmdid);
+ 
+       if (0x05 != evt->cmdid)
+         {
+@@ -1884,7 +1891,7 @@ fpc_hello_evt_handler (FpDevice *device, uint8_t *data, uint32_t len)
+           return -1;
+         }
+ 
+-      expect_len = GUINT32_FROM_BE (evt->length);
++      expect_len = fpc_u32 (self, evt->length);
+ 
+       received_len += len;
+ 
+@@ -1939,6 +1946,7 @@ fpi_ssm_hello_receive_cb (FpiUsbTransfer *transfer, FpDevice *device,
+     {
+       fpi_ssm_mark_failed (transfer->ssm,
+                            fpi_device_error_new (FP_DEVICE_ERROR_GENERAL));
++      return;
+     }
+ 
+   fpi_ssm_next_state (transfer->ssm);
+@@ -1991,8 +1999,11 @@ fpc_cmd_init_cb (FpiUsbTransfer *transfer, FpDevice *device,
+   int ret = fpc_init_evt_handler (device, transfer->buffer, transfer->actual_length);
+ 
+   if (ret)
+-    fpi_ssm_mark_failed (transfer->ssm,
+-                         fpi_device_error_new (FP_DEVICE_ERROR_GENERAL));
++    {
++      fpi_ssm_mark_failed (transfer->ssm,
++                           fpi_device_error_new (FP_DEVICE_ERROR_GENERAL));
++      return;
++    }
+ 
+   fpi_ssm_next_state (transfer->ssm);
+ }
+@@ -2047,6 +2058,11 @@ fpc_init_sm_run_state (FpiSsm *ssm, FpDevice *device)
+     case FPC_INIT_TLS_CONNECT:
+       {
+         fpc_connect_tls (device, self->dev_ctx);
++        if (self->is_le)
++          {
++            fpi_ssm_jump_to_state (ssm, FPC_INIT_TEE_INIT);
++            break;
++          }
+         fpi_ssm_next_state (ssm);
+       }
+       break;
+@@ -2204,17 +2220,23 @@ fpc_dev_probe (FpDevice *device)
    switch (productid)
      {
      case 0x9800:
@@ -46,10 +170,12 @@ index 2eb86c5..1924305 100644
        self->read_remaining = TRUE;
 -      /* patches/0009: 24 byte image message prefix where libfpcbep.so wants 34. */
        self->relayout_img_msg = TRUE;
++      self->is_le = TRUE;
        break;
  
+     default:
 diff --git a/libfprint/drivers/fpcmoh/fpc.h b/libfprint/drivers/fpcmoh/fpc.h
-index 215d1bc..941829a 100644
+index 215d1bc..db724ea 100644
 --- a/libfprint/drivers/fpcmoh/fpc.h
 +++ b/libfprint/drivers/fpcmoh/fpc.h
 @@ -83,7 +83,7 @@
@@ -61,9 +187,22 @@ index 215d1bc..941829a 100644
  #define EP_IN_MAX_BUF_SIZE (2048)
  
  
-@@ -356,4 +356,5 @@ struct _FpiDeviceFpcMoh
+@@ -356,4 +356,18 @@ struct _FpiDeviceFpcMoh
  
    /* patches/0010: samples the matcher refused during this enrollment. */
    guint32         enroll_rejects;
 +  guint8          ep_in;
++  gboolean        is_le;
  };
++
++static inline guint32
++fpc_u32 (FpiDeviceFpcMoh *self, guint32 val)
++{
++  return self->is_le ? GUINT32_FROM_LE (val) : GUINT32_FROM_BE (val);
++}
++
++static inline guint16
++fpc_u16 (FpiDeviceFpcMoh *self, guint16 val)
++{
++  return self->is_le ? GUINT16_FROM_LE (val) : GUINT16_FROM_BE (val);
++}

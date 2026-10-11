@@ -68,7 +68,7 @@ echo
 echo "==> dist/libfprint-2.so.2.0.0 built successfully!"
 
 # Verify fpcmoh driver and e340 id
-if strings -a "$SRC/dist/libfprint-2.so.2.0.0" | grep -q "FPC MOH Fingerprint Sensor"; then
+if strings -a "$SRC/dist/libfprint-2.so.2.0.0" | grep "FPC MOH Fingerprint Sensor" >/dev/null; then
   echo "    [OK] fpcmoh driver present"
 else
   echo "    [ERROR] fpcmoh driver missing" >&2
